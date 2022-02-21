@@ -1,53 +1,72 @@
 const TFCToken = artifacts.require("TFCToken");
+const SwapContract = artifacts.require("SwapContract");
 
 contract("TFCToken Test", (accounts) => {
-  let contract;
+  let token;
+  let swapContract;
   let investor = "0xF3a8aEf1D28d4713df4505a3408e3e63264E26f8";
-  let buyer = "0x5BbC0c6DAFa586c2769d685FC6901166051fcF59";
+  let buyer = "0x8949432405096EC73FE901CE9e1bf934E8AC168D";
   const name = "Tyler Fyu Token";
   const symbol = "TFC";
   const supply = 10000;
 
   before(async () => {
-    contract = await TFCToken.new(name, symbol, supply);
+    token = await TFCToken.new(name, symbol, web3.utils.toWei(supply.toString(), 'ether'));
+    swapContract = await SwapContract.new(token.address);
+    token.transfer(swapContract.address, web3.utils.toWei(supply.toString(), 'ether'));
   })
 
   describe("deployment", () => {
     it('deploys successfully', async () => {
-      const _address = contract.address;
+      const _address = token.address;
       assert.notEqual(_address, 0x0);
     });
 
     it('get successfully the token name', async () => {
-      const _name = await contract.name();
+      const _name = await token.name();
       assert.equal(name, _name);
     });
 
     it('get successfully the symbol', async () => {
-      const _symbol = await contract.symbol();
+      const _symbol = await token.symbol();
       assert.equal(symbol, _symbol);
     });
 
     it('get successfully the total balance', async () => {
-      const _balance = await contract.balanceOf(investor);
-      assert.equal(_balance.toString(), supply.toString());
+      const _balance = await token.balanceOf(swapContract.address);
+      assert.equal(web3.utils.fromWei(_balance.toString(), 'ether'), supply.toString());
     });
-
-    it('Transfer successfully', async () => {
-      await contract.transfer(buyer, 3000);
-      const _balanceOfInvestor = await contract.balanceOf(investor);
-      const _balanceOfBuyer = await contract.balanceOf(buyer);
-      assert.equal(_balanceOfInvestor.toString(), "7000");
-      assert.equal(_balanceOfBuyer, "3000");
-    });
-
-    // it("Reward Successfullly", async () => {
-    //   await contract.approve(investor, 1000);
-    //   await contract.transferFrom(buyer, investor, 1000);
-    //   const _balanceOfInvestor = await contract.balanceOf(investor);
-    //   const _balanceOfBuyer = await contract.balanceOf(buyer);
-    //   assert.equal(_balanceOfInvestor.toString(), "8000");
-    //   assert.equal(_balanceOfBuyer, "2000");
-    // })
   })
+
+  describe("Swap token", () => {
+    let result;
+    let buyEther = 2;
+    let sellTFC = 100;
+
+    it('Buy successfully the TFC token.', async() => {
+      result = await swapContract.buyTokens({from: buyer, value: web3.utils.toWei(buyEther.toString(),'ether')});
+      const _balanceOfInvestor = await token.balanceOf(swapContract.address);
+      const _balanceOfBuyer = await token.balanceOf(buyer);
+      assert.equal(web3.utils.fromWei(_balanceOfBuyer.toString(), 'ether'), "200");
+      assert.equal(web3.utils.fromWei(_balanceOfInvestor.toString(), 'ether'), "9800");
+    });
+
+    
+  })
+
+  describe("Sell Token", () => {
+    let sellTFC = 100;
+
+    before(async () => {
+      await token.approve(swapContract.address, web3.utils.toWei(sellTFC.toString(), 'ether'));
+    });
+
+    it('Sell successfully the TFC token.', async() => {
+      result = await swapContract.sellTokens(web3.utils.toWei(sellTFC.toString(), 'ether'), {from: buyer})
+      // const _balanceOfInvestor = await token.balanceOf(swapContract.address);
+      // const _balanceOfBuyer = await token.balanceOf(buyer);
+      // assert.equal(web3.utils.fromWei(_balanceOfBuyer.toString(), 'ether'), "100");
+      // assert.equal(web3.utils.fromWei(_balanceOfInvestor.toString(), 'ether'), "9900");
+    });
+  });
 })
