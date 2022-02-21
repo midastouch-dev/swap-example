@@ -3,6 +3,7 @@ import Web3 from 'web3/dist/web3.min.js'
 import logo from './logo.svg';
 import './App.css';
 import TFCToken from './abis/TFCToken.json';
+import SwapContract from './abis/SwapContract.json';
 
 function App() {
   const [balanceEth, setBalanceEth] = React.useState('0');
@@ -10,7 +11,9 @@ function App() {
   const [walletAddress, setWalletAddress] = React.useState('');
   const [globalWeb3, setGlobalWeb3] = useState(null);
   const [contractTFCToken, setContractTFCToken] = useState(null);
+  const [contractSwapContract, setcontractSwapContract] = useState(null);
   const networkID = 5777;
+  const [swapValue, setSwapValue] = useState('');
 
   React.useEffect(() => {
     connectNetwork();
@@ -49,7 +52,8 @@ function App() {
 
     const networkId = await window.web3.eth.net.getId();
     const netsTFCToken = await TFCToken.networks[networkId];
-    
+    const netsSwapContract = await SwapContract.networks[networkId];
+
     const address = await window.web3.eth.getAccounts();
     if(netsTFCToken) {
       const contract = new window.web3.eth.Contract(TFCToken.abi, netsTFCToken.address);
@@ -61,8 +65,25 @@ function App() {
       return;
     }
 
+    if(netsSwapContract) {
+      const contract = new window.web3.eth.Contract(SwapContract.abi, netsSwapContract.address);
+      setcontractSwapContract(contract);
+    } else {
+      window.alert("Token contract net deployed to detected network");
+      return;
+    }
+
     const balance = await window.web3.eth.getBalance(address[0]);
     setWalletAddress(address[0]);
+    setBalanceEth(balance);
+  }
+
+  const handleClickSwap = async () => {
+    
+    await contractSwapContract.methods.buyTokens().send({value: window.web3.utils.toWei(swapValue, 'ether'), from: walletAddress});
+    let balance = await contractTFCToken.methods.balanceOf(walletAddress).call();
+    setBalanceTFC(balance);
+    balance = await window.web3.eth.getBalance(walletAddress);
     setBalanceEth(balance);
   }
 
@@ -76,16 +97,16 @@ function App() {
             <div>Ethereum</div>
             <div className='balance-area'>Balance: {balanceEth != 0 ? window.web3.utils.fromWei(balanceEth, "Ether") : "0"}</div>
           </div>
-          <input className='input' placeholder="0" />
+          <input className='input' placeholder="0" value={swapValue} onChange={(event) => setSwapValue(event.target.value)}/>
         </div>
         <div>
           <div className='coin-area'>
             <div>TFC</div>
-            <div className='balance-area'>Balance: {balanceTFC}</div>
+            <div className='balance-area'>Balance: {balanceTFC != 0 ? window.web3.utils.fromWei(balanceTFC, "Ether") : "0"}</div>
           </div>
-          <input className='input' placeholder="0" disabled/>
+          <input className='input' placeholder="0" value={swapValue * 100} disabled/>
         </div>
-        <button className='swap-button'>Swap</button>
+        <button className='swap-button' onClick={()=>handleClickSwap()}>Swap</button>
       </div>
     </div>
   );
