@@ -13,7 +13,7 @@ function App() {
   const [globalWeb3, setGlobalWeb3] = useState(null);
   const [contractTFCToken, setContractTFCToken] = useState(null);
   const [contractSwapContract, setcontractSwapContract] = useState(null);
-  const networkID = 5777;
+  const networkID = 97;
   const [swapValue, setSwapValue] = useState('');
   const [buy, setBuy] = useState(true);
   const [swapAddress, setSwapAddress] = useState('');
